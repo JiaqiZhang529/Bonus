@@ -49,6 +49,7 @@ int main(int argc, const char * argv[]) {
       {
         M[n]= M[n]*9.81;
       }
+
     double c0, c1, cov00, cov01, cov11, sumsq;
     gsl_fit_linear (M, 1, D, 1, 19,
                    &c0, &c1, &cov00, &cov01, &cov11,
@@ -64,16 +65,36 @@ int main(int argc, const char * argv[]) {
     int n = 19;
     if (pipe) {  
       fprintf(pipe, "set term wx\n");                 
-      fprintf(pipe, "set datafile separator ','\n"); 
       fprintf(pipe, "set xlabel '|Force| (Newtons)'\n");
       fprintf(pipe, "set ylabel 'Distance (meters)'\n");
       fprintf(pipe, "set title '<X,Y> and Linear fit:y=%.4f*x+%.4f'\n",c1,c0);
 
-      fprintf(pipe, "plot './data/spring_data.csv' using  ($2*9.81):1 title '(Force,Distance)',0.0656286 + 0.046432*x\n");
+    
+     // 1 sending gnuplot the plot '-' command
+     fprintf(pipe, "plot '-' title '<x,y>' with points  pt 7 lc rgb 'blue',\
+                         '-' title 'Line' with  linespoints  pt  6 lc rgb 'red'\n");
      
-      fflush(pipe); 
-      fprintf(pipe,"exit \n"); 
-      pclose(pipe);   
+     // 2 followed by data points: <x,y>
+     for (int i = 0; i < n; i++)
+     {
+        fprintf(pipe, "%lf %lf\n", M[i], D[i]);
+     }
+     // 3 followed by the letter "e" 
+     fprintf(pipe, "e");
+     
+     // linear fit
+     fprintf(pipe,"\n"); // start a new draw item
+     fprintf(pipe, "%lf %lf\n", 0.0, c0+c1*0);
+     for (int i = 0; i < n; i++)
+     {
+        fprintf(pipe, "%lf %lf\n", M[i], c0+c1*M[i]);
+     }
+     fprintf(pipe, "%lf %lf\n", 10.0,c0+c1*10);
+     fprintf(pipe, "e");
+      
+     fflush(pipe);
+     fprintf(pipe, "exit \n"); // exit gnuplot
+     pclose(pipe);             //close pipe
     }
     return 0;
 }
